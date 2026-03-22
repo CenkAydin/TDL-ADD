@@ -29,7 +29,7 @@ class EmbeddingLoss(nn.Module):
         loss_batch = 0
         num_batch = embeddings.size()[0]
         num_batch_dynamic = num_batch
-        device = embeddings.device  # device-agnostic
+        device = embeddings.device
         for ibat in range(num_batch):
             embedding = embeddings[ibat, :, :]
 
@@ -44,11 +44,9 @@ class EmbeddingLoss(nn.Module):
             for i in real_mask[0]:
                 proportion = int(i.item()) / 132
                 start = int(1050 * proportion)
-                s_emb = embedding[:, i].to(device)
-                s_emb = torch.unsqueeze(s_emb, dim=1)
                 emb = torch.empty([emb_dim, 0], device=device)
                 for j in range(start, start + scalenum):
-                    s_emb = embedding[:, j].to(device)
+                    s_emb = embedding[:, j]
                     s_emb = torch.unsqueeze(s_emb, dim=1)
                     emb = torch.cat([emb, s_emb], dim=1)
                 Real_embedding = torch.cat([Real_embedding, emb], dim=1)  #concat all real embedding frames
@@ -57,7 +55,7 @@ class EmbeddingLoss(nn.Module):
                 start = int(1050 * proportion)
                 emb = torch.empty([emb_dim, 0], device=device)
                 for j in range(start, start + scalenum):
-                    s_emb = embedding[:, j].to(device)
+                    s_emb = embedding[:, j]
                     s_emb = torch.unsqueeze(s_emb, dim=1)
                     emb = torch.cat([emb, s_emb], dim=1)
                 Fake_embedding = torch.cat([Fake_embedding, emb], dim=1)  #concat all fake embedding frames

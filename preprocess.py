@@ -3,7 +3,6 @@ from feature_extraction import *
 import os
 import torch
 from tqdm import tqdm
-from transformers import Wav2Vec2ForCTC, Wav2Vec2Processor, Wav2Vec2Tokenizer
 from transformers import Wav2Vec2Model, Wav2Vec2FeatureExtractor
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
@@ -43,7 +42,7 @@ for part_ in ["train", "dev", "eval"]:
     target_dir = os.path.join(OUTPUT_DIR, part_,
                               "xls-r-300m")
     processor = Wav2Vec2FeatureExtractor.from_pretrained("facebook/wav2vec2-xls-r-300m")
-    model = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-xls-r-300m").to(device)
+    model = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-xls-r-300m", use_safetensors=True).to(device)
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
     for idx in tqdm(range(len(asvspoof_raw))):

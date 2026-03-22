@@ -1,6 +1,15 @@
 import numpy as np
+import argparse
+import os
 from sklearn.metrics import (auc, precision_recall_fscore_support,
                              roc_auc_score, roc_curve)
+
+
+def init_args():
+    parser = argparse.ArgumentParser("evaluate score arrays")
+    parser.add_argument('--score_dir', type=str, default='./scores/repro',
+                        help='directory that contains final_label.npy and final_pred.npy')
+    return parser.parse_args()
 
 def calculate_eer(y_true, y_score):
     fpr, tpr, thresholds = roc_curve(y_true, y_score, pos_label=1)
@@ -10,8 +19,9 @@ def calculate_eer(y_true, y_score):
     return eer
 
 if __name__ == "__main__":
-    label = np.load('./scores/final_label.npy')
-    pred = np.load('./scores/final_pred.npy')
+    args = init_args()
+    label = np.load(os.path.join(args.score_dir, 'final_label.npy'))
+    pred = np.load(os.path.join(args.score_dir, 'final_pred.npy'))
 
     print(pred,'pred')
     print(label,'label')

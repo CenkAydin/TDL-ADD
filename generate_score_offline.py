@@ -76,8 +76,8 @@ def test_on_19PS(task, feat_model_path, loss_model_path, output_score_path, mode
             labels = labels.detach().numpy()
             y_pred = np.append(y_pred, score, axis=0) # all predict frames 
             y = np.append(y, labels, axis=0) # all label frames
-        np.save("./scores/final_label", y)
-        np.save("./scores/final_pred", y_pred)
+        np.save(os.path.join(output_score_path, "final_label"), y)
+        np.save(os.path.join(output_score_path, "final_pred"), y_pred)
         EER = calculate_eer(y, y_pred)
         print(EER)
 
