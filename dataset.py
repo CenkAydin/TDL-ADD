@@ -113,10 +113,10 @@ class ASVspoof2019PS(Dataset):
         self.pad_chop = pad_chop
         self.padding = padding
         self.label = {"spoof": 1, "bonafide": 0}
-        self.path = os.path.join(self.ptf, 'xls-r-300m')
-        # self.all_files = librosa.util.find_files(os.path.join(self.ptf, self.feature), ext="pt")
-        protocol = os.path.join(os.path.join('/home/xieyuankun/data/asv2019PS/ASVspoof2019_PS_cm_protocols/',
-                                             'PS_' + self.part + '_0.16_real1_pad1.txt'))
+        # Protocol path - relative to repo root
+        _base_dir = os.path.dirname(os.path.abspath(__file__))
+        protocol = os.path.join(_base_dir, 'label',
+                                             'PS_' + self.part + '_0.16_real1_pad1.txt')
         with open(protocol, 'r') as f:
             audio_info = [info.strip().split(' ', 2) for info in f.readlines()]
         self.all_info = audio_info
@@ -126,7 +126,7 @@ class ASVspoof2019PS(Dataset):
 
     def __getitem__(self, idx):
         filename, ori_len, label = self.all_info[idx]
-        filepath = os.path.join(self.path, filename + ".pt")
+        filepath = os.path.join(self.ptf, 'xls-r-300m', filename + ".pt")
         basename = os.path.basename(filepath)
         all_info = basename.split(".")[0].split("_")
         featureTensor = torch.load(filepath)
@@ -186,7 +186,7 @@ def padding_Tensor(spec, ref_len):
     _, cur_len, width = spec.shape
     assert ref_len > cur_len
     padd_len = ref_len - cur_len
-    zero = torch.zeros((1, padd_len, width), dtype=spec.dtype).cuda()
+    zero = torch.zeros((1, padd_len, width), dtype=spec.dtype, device=spec.device)
     return torch.cat((spec, zero), 1)
 
 
@@ -204,7 +204,8 @@ def silence_padding_Tensor(spec, ref_len):
 
 
 if __name__ == "__main__":
-    training_set = ASVspoof2019PS('/home/xieyuankun/data/asv2019PS/preprocess_xls-r-300m', 'train', feature='xls-r-300m'
+    _base_dir = os.path.dirname(os.path.abspath(__file__))
+    training_set = ASVspoof2019PS(os.path.join(_base_dir, 'asv2019PS', 'preprocess_xls-r-300m'), 'train', feature='xls-r-300m'
                                   , feat_len=750, pad_chop=False, padding='zero')
     trainDataLoader = DataLoader(training_set, batch_size=32, shuffle=True, num_workers=0,
                                  collate_fn=training_set.collate_fn)

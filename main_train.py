@@ -23,9 +23,9 @@ def initParams():
     # Data folder prepare
     parser.add_argument("-a", "--access_type", default='LA')
     parser.add_argument("-d", "--path_to_database", type=str, help="dataset path",
-                        default='/home/xieyuankun/data/asv2019')
+                        default='./asv2019PS/database')
     parser.add_argument("-f", "--path_to_features", type=str, help="features path",
-                        default='/home/xieyuankun/data/asv2019PS/preprocess_xls-r-300m')
+                        default='./asv2019PS/preprocess_xls-r-300m')
     parser.add_argument("-o", "--out_fold", type=str, help="output folder", required=False, default='./models/try/')
     parser.add_argument("--feat", type=str, help="which feature to use", default='xls-r-300m',)
     parser.add_argument("--feat_len", type=int, help="features length", default=1050)
@@ -36,15 +36,15 @@ def initParams():
                         help="how to pad short utterance")
     parser.add_argument('-m', '--model', help='Model arch', default='TDL',)
     parser.add_argument('--num_epochs', type=int, default=200, help="Number of epochs for training")
-    parser.add_argument('--batch_size', type=int, default=64, help="Mini batch size for training")
+    parser.add_argument('--batch_size', type=int, default=16, help="Mini batch size for training")
     parser.add_argument('--lr', type=float, default=0.0001, help="learning rate")
     parser.add_argument('--lr_decay', type=float, default=0.5, help="decay learning rate")
     parser.add_argument('--interval', type=int, default=5, help="interval to decay lr")
     parser.add_argument('--beta_1', type=float, default=0.9, help="bata_1 for Adam")
     parser.add_argument('--beta_2', type=float, default=0.999, help="beta_2 for Adam")
     parser.add_argument('--eps', type=float, default=1e-8, help="epsilon for Adam")
-    parser.add_argument("--gpu", type=str, help="GPU index", default="13")
-    parser.add_argument('--num_workers', type=int, default=8, help="number of workers")
+    parser.add_argument("--gpu", type=str, help="GPU index", default="0")
+    parser.add_argument('--num_workers', type=int, default=0, help="number of workers")
     parser.add_argument('--base_loss', type=str, default="bce", choices=["ce", "bce"],
                         help="use which loss for basic training")
     parser.add_argument('--add_loss', type=str, default=None,

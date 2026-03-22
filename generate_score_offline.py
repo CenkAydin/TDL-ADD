@@ -18,11 +18,13 @@ def init():
     parser = argparse.ArgumentParser("load model scores")
     parser.add_argument('--model_folder', type=str, help="directory for pretrained model",
                         default='./models/try/')
+    parser.add_argument('--model_name', type=str, help="model name for score file",
+                        default='TDL')
     parser.add_argument('-s', '--score_dir', type=str, help="folder path for writing score",
                         default='./scores')
-    parser.add_argument("-t", "--task", type=str, help="which dataset you would liek to score on",
+    parser.add_argument("-t", "--task", type=str, help="which dataset you would like to score on",
                         required=False, default='19eval')
-    parser.add_argument("--gpu", type=str, help="GPU index", default="6")
+    parser.add_argument("--gpu", type=str, help="GPU index", default="0")
     args = parser.parse_args()
 
     os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
@@ -42,12 +44,20 @@ def calculate_eer(y_true, y_score):
 
 def test_on_19PS(task, feat_model_path, loss_model_path, output_score_path, model_name):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = torch.load(feat_model_path)
-    test_set = ASVspoof2019PS('/home/xieyuankun/data/asv2019PS/preprocess_xls-r-300m', 'eval',
+    model = torch.load(feat_model_path, map_location=device)
+    
+    # Use relative path for features
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    features_path = os.path.join(base_dir, 'asv2019PS', 'preprocess_xls-r-300m')
+    
+    test_set = ASVspoof2019PS(features_path, 'eval',
                               'xls-r-300m', feat_len=1050, pad_chop=True, padding='zero')
 
     testDataLoader = DataLoader(test_set, batch_size=1, shuffle=False, num_workers=0)
     model.eval()
+
+    if not os.path.exists(output_score_path):
+        os.makedirs(output_score_path)
 
     txt_file_name = os.path.join(output_score_path, model_name + '_' + task + '_score.txt')
 
@@ -55,10 +65,9 @@ def test_on_19PS(task, feat_model_path, loss_model_path, output_score_path, mode
         y_pred = np.array([])
         y = np.array([])
         for i, data_slice in enumerate(tqdm(testDataLoader)):
-            w2v2, audio_fn,lenOri, labels = data_slice[0], data_slice[1], data_slice[2], data_slice[3]
+            w2v2, audio_fn, lenOri, labels = data_slice[0], data_slice[1], data_slice[2], data_slice[3]
             w2v2 = w2v2.transpose(1, 2).to(device)
             labels = labels.to(device)
-            # w2v2 = w2v2.squeeze(dim = 1)
             embedding, w2v2_outputs = model(w2v2) 
             score = w2v2_outputs
             score = score.squeeze(dim=0)[:int(lenOri)].cpu() # before calculate EER, delete the padding area according to the lenori.
@@ -67,8 +76,8 @@ def test_on_19PS(task, feat_model_path, loss_model_path, output_score_path, mode
             labels = labels.detach().numpy()
             y_pred = np.append(y_pred, score, axis=0) # all predict frames 
             y = np.append(y, labels, axis=0) # all label frames
-        np.save("./scores/final_label",y)
-        np.save("./scores/final_pred",y_pred)
+        np.save("./scores/final_label", y)
+        np.save("./scores/final_pred", y_pred)
         EER = calculate_eer(y, y_pred)
         print(EER)
 

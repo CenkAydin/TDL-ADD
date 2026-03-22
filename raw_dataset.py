@@ -98,9 +98,9 @@ class ASVspoof2019PSRaw(Dataset):
         super(ASVspoof2019PSRaw, self).__init__()
         self.ptd = path_to_database
         self.part = part
-        self.path_to_audio = os.path.join(self.ptd, self.part +'/con_wav/')
+        self.path_to_audio = os.path.join(self.ptd, self.part, 'con_wav')
         self.path_to_protocol = path_to_protocol
-        protocol = os.path.join(os.path.join(self.path_to_protocol, 'PS_'+ self.part + '_0.16_real1_pad1.txt'))
+        protocol = os.path.join(self.path_to_protocol, 'PS_'+ self.part + '_0.16_real1_pad1.txt')
         self.label = {"spoof": 1, "bonafide": 0}
         with open(protocol, 'r') as f:
             audio_info = [info.strip().split() for info in f.readlines()]

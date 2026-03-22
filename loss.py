@@ -29,6 +29,7 @@ class EmbeddingLoss(nn.Module):
         loss_batch = 0
         num_batch = embeddings.size()[0]
         num_batch_dynamic = num_batch
+        device = embeddings.device  # device-agnostic
         for ibat in range(num_batch):
             embedding = embeddings[ibat, :, :]
 
@@ -37,32 +38,29 @@ class EmbeddingLoss(nn.Module):
             real_mask = torch.where(true_label == 1)  # real frame position
             fake_mask = torch.where(true_label == 0)  # fake frame position
             emb_dim = 32
-            Real_embedding = torch.empty([emb_dim, 0]).cuda()
-            Fake_embedding = torch.empty([emb_dim, 0]).cuda()
+            Real_embedding = torch.empty([emb_dim, 0], device=device)
+            Fake_embedding = torch.empty([emb_dim, 0], device=device)
             scalenum = int(1050 / 132)  # ratio of label sequence to the embedding sequence
             for i in real_mask[0]:
                 proportion = int(i.item()) / 132
                 start = int(1050 * proportion)
-                s_emb = embedding[:, i].cuda()
+                s_emb = embedding[:, i].to(device)
                 s_emb = torch.unsqueeze(s_emb, dim=1)
-                emb = torch.empty([emb_dim, 0]).cuda()
+                emb = torch.empty([emb_dim, 0], device=device)
                 for j in range(start, start + scalenum):
-                    s_emb = embedding[:, j].cuda()
+                    s_emb = embedding[:, j].to(device)
                     s_emb = torch.unsqueeze(s_emb, dim=1)
-                    emb = torch.cat([emb, s_emb], dim=1).cuda()
+                    emb = torch.cat([emb, s_emb], dim=1)
                 Real_embedding = torch.cat([Real_embedding, emb], dim=1)  #concat all real embedding frames
             for i in fake_mask[0]:
                 proportion = int(i.item()) / 132
                 start = int(1050 * proportion)
-                emb = torch.empty([emb_dim, 0]).cuda()
+                emb = torch.empty([emb_dim, 0], device=device)
                 for j in range(start, start + scalenum):
-                    s_emb = embedding[:, j].cuda()
+                    s_emb = embedding[:, j].to(device)
                     s_emb = torch.unsqueeze(s_emb, dim=1)
-                    emb = torch.cat([emb, s_emb], dim=1).cuda()
+                    emb = torch.cat([emb, s_emb], dim=1)
                 Fake_embedding = torch.cat([Fake_embedding, emb], dim=1)  #concat all fake embedding frames
-
-            # print(Real_embedding.size(), 'real_size')
-            # print(Fake_embedding.size(), 'fake_size')
 
             r_embedding = Real_embedding
             r_embedding = r_embedding.t()  # [M, D]
