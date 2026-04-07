@@ -20,7 +20,12 @@ def init():
                         default='./models/try/')
     parser.add_argument('--model_name', type=str, help="model name for score file",
                         default='TDL')
-    parser.add_argument('-s', '--score_dir', type=str, help="folder path for writing score",
+    parser.add_argument("-f", "--path_to_features", type=str,
+                        help="path to pre-extracted features",
+                        default='')
+    parser.add_argument("--feat", type=str, help="feature subdirectory name",
+                        default='wavlm-large')
+    parser.add_argument('--score_dir', '-s', type=str, help="folder path for writing score",
                         default='./scores')
     parser.add_argument("-t", "--task", type=str, help="which dataset you would like to score on",
                         required=False, default='19eval')
@@ -42,16 +47,13 @@ def calculate_eer(y_true, y_score):
     return eer
 
 
-def test_on_19PS(task, feat_model_path, loss_model_path, output_score_path, model_name):
+def test_on_19PS(task, feat_model_path, loss_model_path, output_score_path, model_name,
+                 features_path, feat_name):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = torch.load(feat_model_path, map_location=device)
-    
-    # Use relative path for features
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    features_path = os.path.join(base_dir, 'asv2019PS', 'preprocess_xls-r-300m')
-    
+
     test_set = ASVspoof2019PS(features_path, 'eval',
-                              'xls-r-300m', feat_len=1050, pad_chop=True, padding='zero')
+                              feat_name, feat_len=1050, pad_chop=True, padding='zero')
 
     testDataLoader = DataLoader(test_set, batch_size=1, shuffle=False, num_workers=0)
     model.eval()
@@ -84,7 +86,14 @@ def test_on_19PS(task, feat_model_path, loss_model_path, output_score_path, mode
 
 if __name__ == "__main__":
     args = init()
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    # Resolve features path: use arg if provided, else default to A1_WavLM_Large
+    if args.path_to_features:
+        features_path = args.path_to_features
+    else:
+        features_path = os.path.join(base_dir, 'asv2019PS', 'preprocess_A1_WavLM_Large')
     model_dir = os.path.join(args.model_folder)
     model_path = os.path.join(model_dir, "anti-spoofing_feat_model.pt")
     loss_model_path = os.path.join(model_dir, "anti-spoofing_loss_model.pt")
-    test_on_19PS(args.task, model_path, loss_model_path, args.score_dir, args.model_name)
+    test_on_19PS(args.task, model_path, loss_model_path, args.score_dir, args.model_name,
+                 features_path, args.feat)

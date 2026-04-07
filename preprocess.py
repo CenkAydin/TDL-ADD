@@ -3,7 +3,7 @@ from feature_extraction import *
 import os
 import torch
 from tqdm import tqdm
-from transformers import Wav2Vec2Model, Wav2Vec2FeatureExtractor
+from transformers import WavLMModel, Wav2Vec2FeatureExtractor
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -12,7 +12,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATABASE_DIR = os.path.join(BASE_DIR, "asv2019PS", "database")
 PROTOCOL_DIR = os.path.join(BASE_DIR, "label")
-OUTPUT_DIR = os.path.join(BASE_DIR, "asv2019PS", "preprocess_xls-r-300m")
+OUTPUT_DIR = os.path.join(BASE_DIR, "asv2019PS", "preprocess_A1_WavLM_Large")
 
 def pad_dataset(wav):
     waveform = wav.squeeze(0)
@@ -40,9 +40,12 @@ for part_ in ["train", "dev", "eval"]:
     asvspoof_raw = raw_dataset.ASVspoof2019PSRaw(DATABASE_DIR,
                                            PROTOCOL_DIR, part=part_)
     target_dir = os.path.join(OUTPUT_DIR, part_,
-                              "xls-r-300m")
-    processor = Wav2Vec2FeatureExtractor.from_pretrained("facebook/wav2vec2-xls-r-300m")
-    model = Wav2Vec2Model.from_pretrained("facebook/wav2vec2-xls-r-300m", use_safetensors=True).to(device)
+                              "wavlm-large")
+    processor = Wav2Vec2FeatureExtractor.from_pretrained("microsoft/wavlm-large")
+    model = WavLMModel.from_pretrained("microsoft/wavlm-large", use_safetensors=True).to(device)
+    for param in model.parameters():
+        param.requires_grad = False
+    model.eval()
     if not os.path.exists(target_dir):
         os.makedirs(target_dir)
     for idx in tqdm(range(len(asvspoof_raw))):
@@ -53,7 +56,7 @@ for part_ in ["train", "dev", "eval"]:
         input_values = processor(waveform, sampling_rate=16000,
                                  return_tensors="pt").input_values.to(device)
         with torch.no_grad():
-            wav2vec2 = model(input_values).last_hidden_state.to(device)
-        print(wav2vec2.shape)
-        torch.save(wav2vec2, os.path.join(target_dir, "%s.pt" % (filename)))
+            wavlm_out = model(input_values).last_hidden_state  # (1, T, 1024)
+        print(wavlm_out.shape)
+        torch.save(wavlm_out, os.path.join(target_dir, "%s.pt" % (filename)))
     print("Done!")

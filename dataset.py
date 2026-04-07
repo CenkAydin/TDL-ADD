@@ -126,10 +126,10 @@ class ASVspoof2019PS(Dataset):
 
     def __getitem__(self, idx):
         filename, ori_len, label = self.all_info[idx]
-        filepath = os.path.join(self.ptf, 'xls-r-300m', filename + ".pt")
+        filepath = os.path.join(self.ptf, self.feature, filename + ".pt")
         basename = os.path.basename(filepath)
         all_info = basename.split(".")[0].split("_")
-        featureTensor = torch.load(filepath)
+        featureTensor = torch.load(filepath, weights_only=True)
         if self.feature == "wav2vec2_largeraw":
             # featureTensor = featureTensor.permute(0, 2, 1)
             featureTensor = featureTensor.float()

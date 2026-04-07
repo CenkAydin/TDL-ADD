@@ -25,9 +25,9 @@ def initParams():
     parser.add_argument("-d", "--path_to_database", type=str, help="dataset path",
                         default='./asv2019PS/database')
     parser.add_argument("-f", "--path_to_features", type=str, help="features path",
-                        default='./asv2019PS/preprocess_xls-r-300m')
-    parser.add_argument("-o", "--out_fold", type=str, help="output folder", required=False, default='./models/try/')
-    parser.add_argument("--feat", type=str, help="which feature to use", default='xls-r-300m',)
+                        default='./asv2019PS/preprocess_A1_WavLM_Large')
+    parser.add_argument("-o", "--out_fold", type=str, help="output folder", required=False, default='./models/A1_WavLM_Large/')
+    parser.add_argument("--feat", type=str, help="which feature to use", default='wavlm-large',)
     parser.add_argument("--feat_len", type=int, help="features length", default=1050)
     parser.add_argument("--lam", type=int, help="weight for emb", default=0.1)
     parser.add_argument('--pad_chop', type=str2bool, nargs='?', const=True, default=True,
@@ -65,11 +65,11 @@ def initParams():
             shutil.rmtree(args.out_fold)
             os.mkdir(args.out_fold)
         # Folder for intermediate results
-        if not os.path.exists(os.path.join(args.out_fold, 'checkpoint')):
-            os.makedirs(os.path.join(args.out_fold, 'checkpoint'))
+        if not os.path.exists(os.path.join(args.out_fold, 'checkpoints_A1_WavLM_Large')):
+            os.makedirs(os.path.join(args.out_fold, 'checkpoints_A1_WavLM_Large'))
         else:
-            shutil.rmtree(os.path.join(args.out_fold, 'checkpoint'))
-            os.mkdir(os.path.join(args.out_fold, 'checkpoint'))
+            shutil.rmtree(os.path.join(args.out_fold, 'checkpoints_A1_WavLM_Large'))
+            os.mkdir(os.path.join(args.out_fold, 'checkpoints_A1_WavLM_Large'))
 
         # Path for input data
         # assert os.path.exists(args.path_to_database)
@@ -154,6 +154,9 @@ def train(args):
     else:
         monitor_loss = args.add_loss
 
+    # AMP GradScaler for VRAM-constrained GPUs (GTX 1650 Ti / 4GB)
+    scaler = torch.amp.GradScaler('cuda', enabled=args.cuda)
+
     for epoch_num in tqdm(range(args.num_epochs)):
         feat_model.train()
         trainlossDict = defaultdict(list)
@@ -176,22 +179,28 @@ def train(args):
             length = length.to(args.device)
             labels = labels.to(args.device)
             feat, length, labels = shuffle(feat,length,labels)
-            embedding, feat_outputs = feat_model(feat)
 
+            with torch.amp.autocast('cuda', enabled=args.cuda):
+                embedding, feat_outputs = feat_model(feat)
+
+            # Loss calculated in float32 — binary_cross_entropy is unsafe inside autocast
+            feat_outputs_f = feat_outputs.float()
+            embedding_f = embedding.float()
             if args.base_loss == "bce":
-                BCE_loss = nn.functional.binary_cross_entropy(feat_outputs, labels.float())
-                embedding_loss = emb_loss(embedding,length,labels.float())
+                BCE_loss = nn.functional.binary_cross_entropy(feat_outputs_f, labels.float())
+                embedding_loss = emb_loss(embedding_f, length, labels.float())
                 feat_loss = BCE_loss + args.lam * embedding_loss
             else:
-                CE_loss = cls_loss(feat_outputs, labels)
-                embedding_loss = emb_loss(embedding, labels)
+                CE_loss = cls_loss(feat_outputs_f, labels)
+                embedding_loss = emb_loss(embedding_f, labels)
                 feat_loss = CE_loss + embedding_loss
             trainlossDict['base_loss'].append(feat_loss.item())
 
             if args.add_loss == None:
                 feat_optimizer.zero_grad()
-                feat_loss.backward()
-                feat_optimizer.step()
+                scaler.scale(feat_loss).backward()
+                scaler.step(feat_optimizer)
+                scaler.update()
             with open(os.path.join(args.out_fold, "train_loss.log"), "a") as log:
                 log.write(str(epoch_num) + "\t" + str(i) + "\t" +
                           str(trainlossDict[monitor_loss][-1]) + "\n")
@@ -236,7 +245,7 @@ def train(args):
                               "\n")
         valLoss = np.nanmean(devlossDict[monitor_loss])
         if (epoch_num + 1) % 1 == 0:
-            torch.save(feat_model, os.path.join(args.out_fold, 'checkpoint',
+            torch.save(feat_model, os.path.join(args.out_fold, 'checkpoints_A1_WavLM_Large',
                                                 'anti-spoofing_feat_model_%d.pt' % (epoch_num + 1)))
             loss_model = None
 
