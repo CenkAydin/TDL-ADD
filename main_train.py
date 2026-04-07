@@ -29,12 +29,15 @@ def initParams():
     parser.add_argument("-o", "--out_fold", type=str, help="output folder", required=False, default='./models/A1_WavLM_Large/')
     parser.add_argument("--feat", type=str, help="which feature to use", default='wavlm-large',)
     parser.add_argument("--feat_len", type=int, help="features length", default=1050)
-    parser.add_argument("--lam", type=int, help="weight for emb", default=0.1)
+    parser.add_argument("--lam", type=float, help="weight for emb", default=0.1)
     parser.add_argument('--pad_chop', type=str2bool, nargs='?', const=True, default=True,
                         help="whether pad_chop in the dataset")
     parser.add_argument('--padding', type=str, default='zero', choices=['zero', 'repeat', 'silence'],
                         help="how to pad short utterance")
-    parser.add_argument('-m', '--model', help='Model arch', default='TDL',)
+    parser.add_argument('-m', '--model', help='Model arch', default='TDL',
+                        choices=['TDL', 'TDL_Mamba'])
+    parser.add_argument('--ckpt_subdir', type=str, default='checkpoints',
+                        help="epoch checkpoint alt klasörü (out_fold içinde)")
     parser.add_argument('--num_epochs', type=int, default=200, help="Number of epochs for training")
     parser.add_argument('--batch_size', type=int, default=16, help="Mini batch size for training")
     parser.add_argument('--lr', type=float, default=0.0001, help="learning rate")
@@ -65,11 +68,11 @@ def initParams():
             shutil.rmtree(args.out_fold)
             os.mkdir(args.out_fold)
         # Folder for intermediate results
-        if not os.path.exists(os.path.join(args.out_fold, 'checkpoints_A1_WavLM_Large')):
-            os.makedirs(os.path.join(args.out_fold, 'checkpoints_A1_WavLM_Large'))
+        if not os.path.exists(os.path.join(args.out_fold, args.ckpt_subdir)):
+            os.makedirs(os.path.join(args.out_fold, args.ckpt_subdir))
         else:
-            shutil.rmtree(os.path.join(args.out_fold, 'checkpoints_A1_WavLM_Large'))
-            os.mkdir(os.path.join(args.out_fold, 'checkpoints_A1_WavLM_Large'))
+            shutil.rmtree(os.path.join(args.out_fold, args.ckpt_subdir))
+            os.mkdir(os.path.join(args.out_fold, args.ckpt_subdir))
 
         # Path for input data
         # assert os.path.exists(args.path_to_database)
@@ -120,6 +123,8 @@ def train(args):
     # initialize model
     if args.model == 'TDL':
         feat_model = TDL().to(args.device)
+    elif args.model == 'TDL_Mamba':
+        feat_model = TDL_Mamba().to(args.device)
     emb_loss = EmbeddingLoss()
     if args.continue_training:
         feat_model = torch.load(os.path.join(args.out_fold, 'anti-spoofing_feat_model.pt')).to(args.device)
@@ -245,7 +250,7 @@ def train(args):
                               "\n")
         valLoss = np.nanmean(devlossDict[monitor_loss])
         if (epoch_num + 1) % 1 == 0:
-            torch.save(feat_model, os.path.join(args.out_fold, 'checkpoints_A1_WavLM_Large',
+            torch.save(feat_model, os.path.join(args.out_fold, args.ckpt_subdir,
                                                 'anti-spoofing_feat_model_%d.pt' % (epoch_num + 1)))
             loss_model = None
 
