@@ -1,6 +1,7 @@
 import raw_dataset
 from feature_extraction import *
 import os
+import argparse
 import torch
 from tqdm import tqdm
 from transformers import WavLMModel, Wav2Vec2FeatureExtractor
@@ -10,9 +11,22 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Base directory - repo root
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATABASE_DIR = os.path.join(BASE_DIR, "asv2019PS", "database")
-PROTOCOL_DIR = os.path.join(BASE_DIR, "label")
-OUTPUT_DIR = os.path.join(BASE_DIR, "asv2019PS", "preprocess_A1_WavLM_Large")
+
+parser = argparse.ArgumentParser(description="WavLM-Large feature extraction")
+parser.add_argument("--database_dir", type=str,
+                    default=os.path.join(BASE_DIR, "asv2019PS", "database"),
+                    help="Root directory of the raw ASVspoof2019PS database")
+parser.add_argument("--protocol_dir", type=str,
+                    default=os.path.join(BASE_DIR, "label"),
+                    help="Directory containing protocol/label files")
+parser.add_argument("--output_dir", type=str,
+                    default=os.path.join(BASE_DIR, "asv2019PS", "preprocess_A1_WavLM_Large"),
+                    help="Root directory where extracted .pt features will be saved")
+args = parser.parse_args()
+
+DATABASE_DIR = args.database_dir
+PROTOCOL_DIR = args.protocol_dir
+OUTPUT_DIR   = args.output_dir
 
 def pad_dataset(wav):
     waveform = wav.squeeze(0)
