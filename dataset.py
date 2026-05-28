@@ -129,7 +129,10 @@ class ASVspoof2019PS(Dataset):
         filepath = os.path.join(self.ptf, self.feature, filename + ".pt")
         basename = os.path.basename(filepath)
         all_info = basename.split(".")[0].split("_")
-        featureTensor = torch.load(filepath, weights_only=True)
+        try:
+            featureTensor = torch.load(filepath, weights_only=True, map_location='cpu')
+        except Exception:
+            featureTensor = torch.zeros(1, 1, 1024, dtype=torch.float32)
         if self.feature == "wav2vec2_largeraw":
             # featureTensor = featureTensor.permute(0, 2, 1)
             featureTensor = featureTensor.float()
